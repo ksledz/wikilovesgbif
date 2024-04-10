@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Results{% endblock %}</h1>
+{% endblock %}
+{% block content %}
+	{% if objects %}
+		{% for object in objects %}
+			{% for url, upload in object.zipped %}
+				<p><img src="{{url}}" width="256" height="256"></p>
+				<p><a href="{{upload}}">upload</a></p>
+			{% endfor %}
+    		{% endfor %}
+	{% else %}
+    		<p>No images are available.</p>
+	{% endif %}
+{% endblock %}
+
