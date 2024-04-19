@@ -58,10 +58,38 @@ def get_observations(gbif_id):
     response = requests.get(url).json()
     for result in response['results']:
         if result['media'] != []:
-            o = Observation (result['key'], result['species'], result['recordedBy'], result['eventDate'])
-            for med in result['media']:
-                o.add_url(med['identifier'])
-                o.add_upload(med['identifier'])
+            eventDate = "check manually"
+            eventAuthor = eventDate
+            eventSpecies = eventDate
+            eventKey = eventDate
+            if 'eventDate' in result:
+                eventDate = result['eventDate']
+            if 'key' in result:
+                eventKey = result['key']
+            if 'species' in result:
+                eventSpecies = result['species']
+            if 'recordedBy' in result:
+                eventAuthor = result['recordedBy']
+            o = Observation (eventKey, eventSpecies, eventAuthor, eventDate)
+            if result['extensions'] != {}:
+                url1 = 'http://rs.gbif.org/terms/1.0/Multimedia'
+                url2 = 'http://rs.tdwg.org/ac/terms/Multimedia'
+                subUrl1 = 'http://purl.org/dc/terms/identifier'
+                subUrl2 = 'http://rs.tdwg.org/ac/terms/accessURI'
+                if url1 in result['extensions']:
+                    for med in result['extensions'][url1]:
+                        o.add_url(med[subUrl1])
+                        o.add_upload(med[subUrl1])
+                if url2 in result['extensions']:
+                    for med in result['extensions'][url2]:
+                        o.add_url(med[subUrl2])
+                        o.add_upload(med[subUrl2])
+
+            else:
+                for med in result['media']:
+                    if 'identifier' in med:
+                        o.add_url(med['identifier'])
+                        o.add_upload(med['identifier'])
             o.zip_urls()
             observations.append(o)
     return observations
