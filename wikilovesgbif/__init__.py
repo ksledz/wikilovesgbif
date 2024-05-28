@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def hello():
-    return 'Hello, World!'
+    return render_template('main.html')
 
 class Observation:
     key: int
@@ -27,14 +27,14 @@ class Observation:
         self.uploads = []
     def add_url(self, url):
         self.urls.append(url)
-    def add_upload(self, url):
+    def add_upload(self, url, extension="jpg"):
         description = '{{Information%0A  |description={{en|1=Photo of ' + self.species + ' uploaded from GBIF}}'
         description +='%0A  |date=' + self.date + '%0A  |source=https://www.gbif.org/occurrence/' + str(self.key)
         description +='%0A  |author=' + self.author +'%0A}}%0A{{gbif|' + str(self.key) + '}}'
         description += '%0A[[Category:Media from GBIF]]%0A[[Category:' + self.species + ']]'
         dest = 'https://commons.wikimedia.org/wiki/Special:Upload'
         res = dest + '?wpUploadDescription=' + description + '&wpLicense=cc-by-4.0&wpDestFile='
-        target_name = self.species + " GBIF observation " + str(self.key) + " " + str(len(self.urls)) + "." + url.split(".")[-1]
+        target_name = self.species + " GBIF observation " + str(self.key) + " " + str(len(self.urls)) + "." + extension
         res += target_name + '&wpSourceType=url&wpUploadFileURL=' + url
         self.uploads.append(res)
     def __str__(self):
@@ -69,18 +69,23 @@ def objectify_result(result):
     o = Observation (eventKey, eventSpecies, eventAuthor, eventDate)
     if result['media'] != []:
         if result['extensions'] != {}:
+            # observation 1998474076 uses url1, sub_url1, format_url1
             url1 = 'http://rs.gbif.org/terms/1.0/Multimedia'
             url2 = 'http://rs.tdwg.org/ac/terms/Multimedia'
-            subUrl1 = 'http://purl.org/dc/terms/identifier'
-            subUrl2 = 'http://rs.tdwg.org/ac/terms/accessURI'
+            sub_url1 = 'http://purl.org/dc/terms/identifier'
+            sub_url2 = 'http://rs.tdwg.org/ac/terms/accessURI'
+            format_url1 = 'http://purl.org/dc/terms/format'
             if url1 in result['extensions']:
                 for med in result['extensions'][url1]:
-                    o.add_url(med[subUrl1])
-                    o.add_upload(med[subUrl1])
+                    o.add_url(med[sub_url1])
+                    extension = med[format_url1].split("/")[-1]
+                    o.add_upload(med[sub_url1], extension)
+            # observation 3716074644 uses url2, sub_url2 but also format_url1
             if url2 in result['extensions']:
                 for med in result['extensions'][url2]:
-                    o.add_url(med[subUrl2])
-                    o.add_upload(med[subUrl2])
+                    o.add_url(med[sub_url2])
+                    extension = med[format_url1].split("/")[-1]
+                    o.add_upload(med[sub_url2], extension)
 
         else:
             for med in result['media']:
