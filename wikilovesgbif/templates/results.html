@@ -4,15 +4,24 @@
   <h1>{% block title %}Results{% endblock %}</h1>
 {% endblock %}
 {% block content %}
+	<div class="search-form__results">
 	{% if objects %}
+	<div class="gallery">
+		<h3>Images on GBIF</h3>
+		<div class="gallery__thumbnails">
 		{% for object in objects %}
 			{% for url, upload in object.zipped %}
-				<p><img src="{{url}}" width="256" height="256"></p>
-				<p><a href="{{upload}}">upload</a></p>
+			<div class="thumb">
+				<img src="{{url}}" width="256" height="256">
+				<a href="{{upload}}">Upload to Commons!</a>
+			</div>
 			{% endfor %}
     		{% endfor %}
+    	</div>
+    </div>
 	{% else %}
     		<p>No images are available.</p>
 	{% endif %}
+	</div>
 {% endblock %}
 
