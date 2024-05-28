@@ -25,8 +25,11 @@ class Observation:
         self.date = date
         self.urls = []
         self.uploads = []
+        self.licenses = []
     def add_url(self, url):
         self.urls.append(url)
+    def add_license(self, license):
+        self.licenses.append(license)
     def add_upload(self, url, extension="jpg"):
         description = '{{Information%0A  |description={{en|1=Photo of ' + self.species + ' uploaded from GBIF}}'
         description +='%0A  |date=' + self.date + '%0A  |source=https://www.gbif.org/occurrence/' + str(self.key)
@@ -50,7 +53,7 @@ class Observation:
             reply += upload + "\n"
         return reply
     def zip_urls(self):
-        self.zipped = zip(self.urls, self.uploads)
+        self.zipped = zip(self.urls, self.uploads, self.licenses)
 
 
 def objectify_result(result):
@@ -75,30 +78,42 @@ def objectify_result(result):
             sub_url1 = 'http://purl.org/dc/terms/identifier'
             sub_url2 = 'http://rs.tdwg.org/ac/terms/accessURI'
             format_url1 = 'http://purl.org/dc/terms/format'
+            license_url="http://purl.org/dc/terms/license"
             if url1 in result['extensions']:
                 for med in result['extensions'][url1]:
-                    o.add_url(med[sub_url1])
-                    extension = med[format_url1].split("/")[-1]
-                    o.add_upload(med[sub_url1], extension)
+                    #https://api.gbif.org/v1/occurrence/search?acceptedTaxonKey=2539067 example of query where if below is necessary
+                    if sub_url1 in med:
+                        o.add_url(med[sub_url1])
+                        extension = "jpg"
+                        if format_url1 in med:
+                            extension = med[format_url1].split("/")[-1]
+                        o.add_upload(med[sub_url1], extension)
+                        license = placeholder
+                        if license_url in med:
+                            license = med[license_url]
+                        o.add_license(license)
             # observation 3716074644 uses url2, sub_url2 but also format_url1
             if url2 in result['extensions']:
                 for med in result['extensions'][url2]:
                     o.add_url(med[sub_url2])
                     extension = med[format_url1].split("/")[-1]
                     o.add_upload(med[sub_url2], extension)
+                    o.add_license(med[license_url])
 
         else:
             for med in result['media']:
                 if 'identifier' in med:
                     o.add_url(med['identifier'])
                     o.add_upload(med['identifier'])
+                    o.add_license("placeholder lol")
         o.zip_urls()
     return o
 
-def get_observations(gbif_id):
+def get_observations(gbif_id, ccby4_only=True):
     observations = []
-    url='https://api.gbif.org/v1/occurrence/search?acceptedTaxonKey='+str(gbif_id)+'&license=CC_BY_4_0'
-    print(url)
+    url='https://api.gbif.org/v1/occurrence/search?acceptedTaxonKey='+str(gbif_id)
+    if (ccby4_only):
+        url += '&license=CC_BY_4_0'
     response = requests.get(url).json()
     for result in response['results']:
         if result['media'] != []:
@@ -108,8 +123,14 @@ def get_observations(gbif_id):
 
 @app.route("/res/<species_id>")
 def show_results(species_id):
-    objects = get_observations(species_id)
+    objects = get_observations(species_id, ccby4_only=True)
     return render_template('results.html', objects=objects)
+
+@app.route("/all/<species_id>")
+def show_all_results(species_id):
+    objects = get_observations(species_id, ccby4_only=False)
+    return render_template('results.html', objects=objects)
+
 
 def get_observation(obs_id):
     observations = []

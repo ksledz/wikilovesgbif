@@ -10,9 +10,10 @@
 		<h3>Images on GBIF</h3>
 		<div class="gallery__thumbnails">
 		{% for object in objects %}
-			{% for url, upload in object.zipped %}
+			{% for url, upload, license in object.zipped %}
 			<div class="thumb">
 				<img src="{{url}}" width="256" height="256">
+				<div>{{license}}</div>
 				<a href="{{upload}}">Upload to Commons!</a>
 			</div>
 			{% endfor %}
