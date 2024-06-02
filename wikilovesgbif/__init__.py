@@ -61,14 +61,18 @@ def objectify_result(result):
     eventAuthor = placeholder
     eventSpecies = placeholder
     eventKey = placeholder
+    license = placeholder
     if 'eventDate' in result:
         eventDate = result['eventDate']
     if 'key' in result:
         eventKey = result['key']
     if 'species' in result:
         eventSpecies = result['species']
+    # TODO observations 2644673220 and 2644717127 end up using author placeholder
     if 'recordedBy' in result:
         eventAuthor = result['recordedBy']
+    if 'license' in result:
+        license = "whole observation is " + result['license']
     o = Observation (eventKey, eventSpecies, eventAuthor, eventDate)
     if result['media'] != []:
         if result['extensions'] != {}:
@@ -79,8 +83,11 @@ def objectify_result(result):
             sub_url2 = 'http://rs.tdwg.org/ac/terms/accessURI'
             format_url1 = 'http://purl.org/dc/terms/format'
             license_url="http://purl.org/dc/terms/license"
+            # an observation in species 2733440 uses license_url2
+            license_url2 = "http://ns.adobe.com/xap/1.0/rights/UsageTerms"
             if url1 in result['extensions']:
                 for med in result['extensions'][url1]:
+                    license_temp = license
                     #https://api.gbif.org/v1/occurrence/search?acceptedTaxonKey=2539067 example of query where if below is necessary
                     if sub_url1 in med:
                         o.add_url(med[sub_url1])
@@ -88,24 +95,31 @@ def objectify_result(result):
                         if format_url1 in med:
                             extension = med[format_url1].split("/")[-1]
                         o.add_upload(med[sub_url1], extension)
-                        license = placeholder
                         if license_url in med:
-                            license = med[license_url]
-                        o.add_license(license)
+                            license_temp = med[license_url]
+                        elif license_url2 in med:
+                            license_temp = med[license_url2]
+                        o.add_license(license_temp)
             # observation 3716074644 uses url2, sub_url2 but also format_url1
             if url2 in result['extensions']:
                 for med in result['extensions'][url2]:
+                    license_temp = license
                     o.add_url(med[sub_url2])
                     extension = med[format_url1].split("/")[-1]
                     o.add_upload(med[sub_url2], extension)
-                    o.add_license(med[license_url])
+                    if license_url in med:
+                        license_temp = med[license_url]
+                    elif license_url2 in med:
+                        license_temp = med[license_url2]
+                    o.add_license(license_temp)
 
         else:
             for med in result['media']:
+                license_temp=license
                 if 'identifier' in med:
                     o.add_url(med['identifier'])
                     o.add_upload(med['identifier'])
-                    o.add_license("placeholder lol")
+                    o.add_license(license_temp)
         o.zip_urls()
     return o
 
